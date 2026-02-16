@@ -44,10 +44,13 @@
       // Verificar alertas incluso desde la página principal
       setInterval(async () => {
         try {
-          const response = await fetch("check_alerts.php");
+          const response = await fetch("/api/alerts/check");
           const data = await response.json();
 
-          if (data.alert) {
+          const hasAlert = data.alerts && data.alerts.length > 0;
+          const message = hasAlert ? data.alerts[0].message : null;
+
+          if (hasAlert && message) {
             // Reproducir sonido
             const audio = new Audio("alert_sound.mp3");
             audio.play().catch((e) => console.log("Error audio:", e));
@@ -55,7 +58,7 @@
             // Mostrar notificación
             if (Notification.permission === "granted") {
               new Notification("🔔 Alerta de Evento", {
-                body: data.message,
+                body: message,
                 icon: "https://cdn-icons-png.flaticon.com/512/1576/1576383.png",
               });
             }

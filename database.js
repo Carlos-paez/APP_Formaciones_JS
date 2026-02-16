@@ -1,51 +1,52 @@
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const os = require("os");
+
+// En Vercel el sistema de archivos es de solo lectura excepto /tmp
+const isVercel = process.env.VERCEL === "1";
+const dbDir = isVercel ? os.tmpdir() : __dirname;
 
 class Database {
   constructor() {
-    this.dbPath = path.join(__dirname, "events.db");
-    this.db = new sqlite3.Database(this.dbPath, (err) => {
-      if (err) {
-        console.error("❌ Error al abrir la base de datos:", err.message);
-        throw err;
-      }
-      console.log("✅ Base de datos conectada:", this.dbPath);
-      this.createTable();
+    this.dbPath = path.join(dbDir, "events.db");
+    this._ready = new Promise((resolve, reject) => {
+      this.db = new sqlite3.Database(this.dbPath, (err) => {
+        if (err) {
+          console.error("❌ Error al abrir la base de datos:", err.message);
+          reject(err);
+          return;
+        }
+        this.db.run("PRAGMA journal_mode=WAL");
+        this.db.run("PRAGMA foreign_keys=ON");
+        const sql = `
+          CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ubicacion TEXT NOT NULL,
+            formador TEXT NOT NULL,
+            hora_inicio TEXT NOT NULL,
+            hora_fin TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `;
+        this.db.run(sql, (err2) => {
+          if (err2) {
+            reject(err2);
+            return;
+          }
+          this.db.run("CREATE INDEX IF NOT EXISTS idx_hora_fin ON events(hora_fin)");
+          this.db.run("CREATE INDEX IF NOT EXISTS idx_created ON events(created_at)");
+          resolve();
+        });
+      });
     });
+  }
 
-    // Configurar PRAGMA
-    this.db.run("PRAGMA journal_mode=WAL");
-    this.db.run("PRAGMA foreign_keys=ON");
+  async ready() {
+    return this._ready;
   }
 
   createTable() {
-    const sql = `
-            CREATE TABLE IF NOT EXISTS events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ubicacion TEXT NOT NULL,
-                formador TEXT NOT NULL,
-                hora_inicio TEXT NOT NULL,
-                hora_fin TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `;
-
-    this.db.run(sql, (err) => {
-      if (err) {
-        console.error("❌ Error creando tabla:", err.message);
-        return;
-      }
-      console.log('✅ Tabla "events" creada/verificada');
-
-      // Crear índices
-      this.db.run(
-        "CREATE INDEX IF NOT EXISTS idx_hora_fin ON events(hora_fin)",
-      );
-      this.db.run(
-        "CREATE INDEX IF NOT EXISTS idx_created ON events(created_at)",
-      );
-      console.log("✅ Índices creados");
-    });
+    // Mantenido por compatibilidad; la creación real ocurre en constructor
   }
 
   saveEvent(ubicacion, formador, hora_inicio, hora_fin) {

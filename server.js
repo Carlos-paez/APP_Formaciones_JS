@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
-// Inicializar base de datos
+// Inicializar base de datos (compatible con Vercel serverless en api/)
 const db = new Database();
 
 // Rutas API
@@ -191,26 +191,31 @@ app.get("*", (req, res) => {
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log("╔═══════════════════════════════════════════════════════════╗");
-  console.log("║                                                           ║");
-  console.log("║  🚀 SERVIDOR DE GESTIÓN DE EVENTOS INICIADO              ║");
-  console.log("║                                                           ║");
-  console.log(`║  📡 Servidor corriendo en: http://localhost:${PORT}      ║`);
-  console.log("║  📁 Directorio base:", __dirname.padEnd(40), "║");
-  console.log("║  🗄️  Base de datos: events.db                            ║");
-  console.log("║                                                           ║");
-  console.log("╚═══════════════════════════════════════════════════════════╝");
-  console.log("\n📝 Endpoints disponibles:");
-  console.log("   GET    /api/events              - Obtener todos los eventos");
-  console.log("   POST   /api/events              - Crear nuevo evento");
-  console.log("   GET    /api/events/:id          - Obtener evento por ID");
-  console.log("   DELETE /api/events/:id          - Eliminar evento");
-  console.log("   GET    /api/alerts/check        - Verificar alertas");
-  console.log("\n📄 Páginas:");
-  console.log("   /              - Página principal");
-  console.log("   /register.html - Registro de eventos");
-  console.log("   /events.html   - Visualización de eventos");
-  console.log("\n✅ Presiona CTRL+C para detener el servidor\n");
+// Iniciar servidor cuando la base de datos esté lista
+db.ready().then(() => {
+  app.listen(PORT, () => {
+    console.log("╔═══════════════════════════════════════════════════════════╗");
+    console.log("║                                                           ║");
+    console.log("║  🚀 SERVIDOR DE GESTIÓN DE EVENTOS INICIADO              ║");
+    console.log("║                                                           ║");
+    console.log(`║  📡 Servidor corriendo en: http://localhost:${PORT}      ║`);
+    console.log("║  📁 Directorio base:", __dirname.padEnd(40), "║");
+    console.log("║  🗄️  Base de datos: events.db                            ║");
+    console.log("║                                                           ║");
+    console.log("╚═══════════════════════════════════════════════════════════╝");
+    console.log("\n📝 Endpoints disponibles:");
+    console.log("   GET    /api/events              - Obtener todos los eventos");
+    console.log("   POST   /api/events              - Crear nuevo evento");
+    console.log("   GET    /api/events/:id          - Obtener evento por ID");
+    console.log("   DELETE /api/events/:id          - Eliminar evento");
+    console.log("   GET    /api/alerts/check        - Verificar alertas");
+    console.log("\n📄 Páginas:");
+    console.log("   /              - Página principal");
+    console.log("   /register.html - Registro de eventos");
+    console.log("   /events.html   - Visualización de eventos");
+    console.log("\n✅ Presiona CTRL+C para detener el servidor\n");
+  });
+}).catch((err) => {
+  console.error("❌ No se pudo iniciar la base de datos:", err);
+  process.exit(1);
 });
